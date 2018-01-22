@@ -1,0 +1,1417 @@
+   1              	 .cpu cortex-m0
+   2              	 .fpu softvfp
+   3              	 .eabi_attribute 20,1
+   4              	 .eabi_attribute 21,1
+   5              	 .eabi_attribute 23,3
+   6              	 .eabi_attribute 24,1
+   7              	 .eabi_attribute 25,1
+   8              	 .eabi_attribute 26,1
+   9              	 .eabi_attribute 30,2
+  10              	 .eabi_attribute 34,0
+  11              	 .eabi_attribute 18,4
+  12              	 .code 16
+  13              	 .file "main.c"
+  14              	 .text
+  15              	.Ltext0:
+  16              	 .cfi_sections .debug_frame
+  17              	 .section .text.radarsense2go_startacq,"ax",%progbits
+  18              	 .align 2
+  19              	 .global radarsense2go_startacq
+  20              	 .code 16
+  21              	 .thumb_func
+  23              	radarsense2go_startacq:
+  24              	.LFB195:
+  25              	 .file 1 "../main.c"
+   1:../main.c     **** /******************************************************************************
+   2:../main.c     ****  * Software License Agreement
+   3:../main.c     ****  *
+   4:../main.c     ****  * Copyright (c) 2016, Infineon Technologies AG
+   5:../main.c     ****  * All rights reserved.
+   6:../main.c     ****  *
+   7:../main.c     ****  * Redistribution and use in source and binary forms, with or without
+   8:../main.c     ****  * modification, are permitted provided that the following conditions are met:
+   9:../main.c     ****  *
+  10:../main.c     ****  * Redistributions of source code must retain the above copyright notice,
+  11:../main.c     ****  * this list of conditions and the following disclaimer.
+  12:../main.c     ****  *
+  13:../main.c     ****  * Redistributions in binary form must reproduce the above copyright notice,
+  14:../main.c     ****  * this list of conditions and the following disclaimer in the documentation
+  15:../main.c     ****  * and/or other materials provided with the distribution.
+  16:../main.c     ****  *
+  17:../main.c     ****  * Neither the name of the copyright holders nor the names of its contributors
+  18:../main.c     ****  * may be used to endorse or promote products derived from this software
+  19:../main.c     ****  * without specific prior written permission
+  20:../main.c     **** 
+  21:../main.c     ****  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  22:../main.c     ****  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  23:../main.c     ****  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  24:../main.c     ****  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+  25:../main.c     ****  * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  26:../main.c     ****  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  27:../main.c     ****  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:../main.c     ****  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:../main.c     ****  * CONTRACT, STRICT LIABILITY,OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  30:../main.c     ****  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  31:../main.c     ****  * POSSIBILITY OF SUCH DAMAGE.
+  32:../main.c     ****  *
+  33:../main.c     ****  * To improve the quality of the software, users are encouraged to share
+  34:../main.c     ****  * modifications, enhancements or bug fixes with Infineon Technologies AG
+  35:../main.c     ****  * (dave@infineon.com).
+  36:../main.c     ****  *
+  37:../main.c     ****  *****************************************************************************/
+  38:../main.c     **** 
+  39:../main.c     **** /****************************************************************
+  40:../main.c     ****  * HEADER FILES
+  41:../main.c     ****  ***************************************************************/
+  42:../main.c     **** #include "Dave.h"
+  43:../main.c     **** #include "radarsense2go_library.h"
+  44:../main.c     **** #include <stdio.h>
+  45:../main.c     **** 
+  46:../main.c     **** XMC_RADARSENSE2GO_TIMING_t radarsense2go_timing =
+  47:../main.c     **** {
+  48:../main.c     **** 		.t_sample_us = 710,          /* 710us -> 1.408kHz */
+  49:../main.c     **** 		.t_cycle_ms = 300,           /* 300 ms */
+  50:../main.c     **** 		.N_exponent_samples = 8     /* 2^8samples * 710us = 182ms BGT24 on-time (settle-time ignored) */
+  51:../main.c     **** };
+  52:../main.c     **** 
+  53:../main.c     **** XMC_RADARSENSE2GO_ALG_t radarsense2go_algorithm =
+  54:../main.c     **** {
+  55:../main.c     **** 		.hold_on_cycles = 1,      /* hold-on cycles to trigger detection */
+  56:../main.c     **** 		.trigger_det_level = 200,  /* trigger detection level */
+  57:../main.c     **** 		.rootcalc_enable = XMC_RADARSENSE2GO_DISABLED /* root calculation for magnitude disabled */
+  58:../main.c     **** };
+  59:../main.c     **** 
+  60:../main.c     **** XMC_RADARSENSE2GO_POWERDOWN_t radarsense2go_powerdown =
+  61:../main.c     **** {
+  62:../main.c     **** 		.sleep_deepsleep_enable   = XMC_RADARSENSE2GO_ENABLED, /* sleep / deepsleep enabled */
+  63:../main.c     **** 		.mainexec_enable          = XMC_RADARSENSE2GO_ENABLED, /* main exec enabled */
+  64:../main.c     **** 		.vadc_clock_gating_enable = XMC_RADARSENSE2GO_ENABLED  /* vadc clock gating enabled */
+  65:../main.c     **** };
+  66:../main.c     **** 
+  67:../main.c     **** uint16_t g_sampling_data_I[256];
+  68:../main.c     **** uint16_t g_sampling_data_Q[256];
+  69:../main.c     **** uint32_t g_fft_data[128];
+  70:../main.c     **** XMC_RADARSENSE2GO_MOTION_t g_motion = XMC_NO_MOTION_DETECT;
+  71:../main.c     **** float g_max_frq_index;
+  72:../main.c     **** bool start = false;
+  73:../main.c     **** 
+  74:../main.c     **** static XMC_RADARSENSE2GO_MOTION_t motion_last=XMC_NO_MOTION_DETECT;
+  75:../main.c     **** void radarsense2go_result( uint32_t *fft_magnitude_array,
+  76:../main.c     **** 		uint16_t size_of_array_mag,
+  77:../main.c     **** 		int16_t *adc_aqc_array_I,
+  78:../main.c     **** 		int16_t *adc_aqc_array_Q,
+  79:../main.c     **** 		uint16_t size_of_array_acq,
+  80:../main.c     **** 		XMC_RADARSENSE2GO_MOTION_t motion,
+  81:../main.c     **** 		uint32_t max_frq_mag,
+  82:../main.c     **** 		uint32_t max_frq_index)
+  83:../main.c     **** {
+  84:../main.c     **** 	/* place your application code for ISR context execution here */
+  85:../main.c     **** 	/* e.g. threshold calibration */
+  86:../main.c     **** 	memcpy(g_sampling_data_I, adc_aqc_array_I, size_of_array_acq * sizeof(uint16_t));
+  87:../main.c     **** 	memcpy(g_sampling_data_Q, adc_aqc_array_Q, size_of_array_acq * sizeof(uint16_t));
+  88:../main.c     **** 	memcpy(g_fft_data, &fft_magnitude_array[1], (size_of_array_mag - 1) * sizeof(uint32_t));
+  89:../main.c     **** 
+  90:../main.c     **** 	g_motion = motion;
+  91:../main.c     **** 
+  92:../main.c     **** 	if (motion == XMC_MOTION_DETECT_APPROACHING || motion == XMC_MOTION_DETECT_DEPARTING)
+  93:../main.c     **** 	{
+  94:../main.c     **** 		g_max_frq_index = max_frq_index * 5.5F; // 1408 Hz/ 2 / 256 (FFT SIZE) / 2
+  95:../main.c     **** 	}
+  96:../main.c     **** 	else
+  97:../main.c     **** 	{
+  98:../main.c     **** 		g_max_frq_index = 0.0F; // Do not show max frequency in case of no motion
+  99:../main.c     **** 	}
+ 100:../main.c     **** 
+ 101:../main.c     **** 	return;
+ 102:../main.c     **** }
+ 103:../main.c     **** 
+ 104:../main.c     **** void radarsense2go_startacq(void)
+ 105:../main.c     **** {
+  26              	 .loc 1 105 0
+  27              	 .cfi_startproc
+  28 0000 074B     	 ldr r3,.L5
+  29 0002 1A68     	 ldr r2,[r3]
+  30              	.LVL0:
+  31              	.LBB44:
+  32              	.LBB45:
+  33              	.LBB46:
+  34              	 .file 2 "C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc/xmc_gpio.h"
+   1:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**
+   2:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @file xmc_gpio.h
+   3:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @date 2015-06-20
+   4:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+   5:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @cond
+   6:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****   *************************************************************************************************
+   7:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * XMClib v2.1.6 - XMC Peripheral Driver Library 
+   8:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+   9:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Copyright (c) 2015-2016, Infineon Technologies AG
+  10:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * All rights reserved.                        
+  11:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *                                             
+  12:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Redistribution and use in source and binary forms, with or without modification,are permitted pr
+  13:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * following conditions are met:   
+  14:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *                                                                              
+  15:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Redistributions of source code must retain the above copyright notice, this list of conditions a
+  16:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * disclaimer.                        
+  17:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * 
+  18:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Redistributions in binary form must reproduce the above copyright notice, this list of condition
+  19:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * disclaimer in the documentation and/or other materials provided with the distribution.          
+  20:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * 
+  21:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Neither the name of the copyright holders nor the names of its contributors may be used to endor
+  22:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * products derived from this software without specific prior written permission.                  
+  23:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *                                                                              
+  24:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR I
+  25:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTI
+  26:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE  FOR ANY DIRECT, IN
+  27:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBS
+  28:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THE
+  29:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * WHETHER IN CONTRACT, STRICT LIABILITY,OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
+  30:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                            
+  31:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *                                                                              
+  32:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * To improve the quality of the software, users are encouraged to share modifications, enhancement
+  33:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Infineon Technologies AG dave@infineon.com).                                                    
+  34:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  **************************************************************************************************
+  35:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+  36:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Change History
+  37:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * --------------
+  38:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+  39:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * 2015-02-20:
+  40:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *     - Initial draft<br>
+  41:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *     - Documentation improved <br>
+  42:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *      
+  43:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * 2015-06-20:
+  44:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *     - Removed version macros and declaration of GetDriverVersion API
+  45:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+  46:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @endcond
+  47:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+  48:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  */
+  49:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+  50:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #ifndef XMC_GPIO_H
+  51:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #define XMC_GPIO_H
+  52:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+  53:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**************************************************************************************************
+  54:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * HEADER FILES
+  55:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  **************************************************************************************************
+  56:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+  57:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #include "xmc_common.h"
+  58:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+  59:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**
+  60:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @addtogroup XMClib XMC Peripheral Library
+  61:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @{
+  62:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  */
+  63:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+  64:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**
+  65:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @addtogroup GPIO
+  66:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @brief General Purpose Input Output (GPIO) driver for the XMC microcontroller family.
+  67:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+  68:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * GPIO driver provide a generic and very flexible software interface for all standard digital I/O 
+  69:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Each port slice has individual interfaces for the operation as General Purpose I/O and it furthe
+  70:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * connectivity to the on-chip periphery and the control for the pad characteristics. 
+  71:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+  72:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * The driver is divided into Input and Output mode.
+  73:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+  74:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Input mode features:
+  75:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * -# Configuration structure XMC_GPIO_CONFIG_t and initialization function XMC_GPIO_Init()
+  76:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * -# Allows the selection of weak pull-up or pull-down device. Configuration structure XMC_GPIO_MO
+  77:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \if XMC1
+  78:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * -# Allows the selection of input hysteresis. XMC_GPIO_SetInputHysteresis()
+  79:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \endif
+  80:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+  81:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * 
+  82:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Output mode features:
+  83:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * -# Allows the selection of push pull/open drain and Alternate output. Configuration structure XM
+  84:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \if XMC4
+  85:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * -# Allows the selection of pad driver strength. Configuration structure XMC_GPIO_OUTPUT_STRENGTH
+  86:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \endif
+  87:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+  88:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * -# Allows the selection of initial output level. Configuration structure XMC_GPIO_OUTPUT_LEVEL_t
+  89:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+  90:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *@{
+  91:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  */
+  92:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  
+  93:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**************************************************************************************************
+  94:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * MACROS
+  95:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  **************************************************************************************************
+  96:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+  97:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #define PORT_IOCR_PC_Pos PORT0_IOCR0_PC0_Pos
+  98:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #define PORT_IOCR_PC_Msk PORT0_IOCR0_PC0_Msk
+  99:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 100:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #define PORT_IOCR_PC_Size 				(8U)
+ 101:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 											
+ 102:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 103:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #define XMC_GPIO_CHECK_OUTPUT_LEVEL(level) ((level == XMC_GPIO_OUTPUT_LEVEL_LOW) || \
+ 104:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****                                             (level == XMC_GPIO_OUTPUT_LEVEL_HIGH))
+ 105:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****                                             
+ 106:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #define XMC_GPIO_CHECK_HWCTRL(hwctrl) ((hwctrl == XMC_GPIO_HWCTRL_DISABLED) || \
+ 107:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****                                        (hwctrl == XMC_GPIO_HWCTRL_PERIPHERAL1) || \
+ 108:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****                                        (hwctrl == XMC_GPIO_HWCTRL_PERIPHERAL2))                    
+ 109:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****                                             
+ 110:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**************************************************************************************************
+ 111:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * ENUMS
+ 112:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  **************************************************************************************************
+ 113:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 114:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 115:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**
+ 116:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Defines output level of a pin. Use type \a XMC_GPIO_OUTPUT_LEVEL_t for this enum.
+ 117:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  */
+ 118:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** typedef enum XMC_GPIO_OUTPUT_LEVEL
+ 119:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** {
+ 120:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****   XMC_GPIO_OUTPUT_LEVEL_LOW  = 0x10000U, /**<  Reset bit */
+ 121:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****   XMC_GPIO_OUTPUT_LEVEL_HIGH = 0x1U, 	/**< Set bit  */
+ 122:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** } XMC_GPIO_OUTPUT_LEVEL_t;
+ 123:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 124:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**
+ 125:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Defines direct hardware control characteristics of the pin . Use type \a XMC_GPIO_HWCTRL_t for t
+ 126:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  */
+ 127:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** typedef enum XMC_GPIO_HWCTRL
+ 128:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** {
+ 129:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****   XMC_GPIO_HWCTRL_DISABLED     = 0x0U, /**<  Software control only */
+ 130:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****   XMC_GPIO_HWCTRL_PERIPHERAL1  = 0x1U, /**<  HWI0/HWO0 control path can override the software confi
+ 131:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****   XMC_GPIO_HWCTRL_PERIPHERAL2  = 0x2U  /**<  HWI1/HWO1 control path can override the software confi
+ 132:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** } XMC_GPIO_HWCTRL_t;
+ 133:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 134:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**************************************************************************************************
+ 135:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * DEVICE FAMILY EXTENSIONS
+ 136:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  **************************************************************************************************
+ 137:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 138:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  #if UC_FAMILY == XMC1
+ 139:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #include "xmc1_gpio.h"
+ 140:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #elif UC_FAMILY == XMC4
+ 141:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #include "xmc4_gpio.h"
+ 142:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #else
+ 143:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #error "xmc_gpio.h: family device not supported"
+ 144:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #endif
+ 145:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 146:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**************************************************************************************************
+ 147:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * API PROTOTYPES
+ 148:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  **************************************************************************************************
+ 149:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 150:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #ifdef __cplusplus
+ 151:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** extern "C" {
+ 152:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** #endif
+ 153:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 154:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 155:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**
+ 156:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @param  port	  Constant pointer pointing to GPIO port, to access port registers like Pn_OUT,Pn_O
+ 157:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @param  pin	  Port pin number.
+ 158:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @param  config GPIO configuration data structure. Refer data structure @ref XMC_GPIO_CONFIG_t fo
+ 159:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 160:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @return None
+ 161:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 162:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \par<b>Description:</b><br>
+ 163:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \if XMC1
+ 164:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Initializes input / output mode settings like, pull up / pull down devices,hysteresis, push pull
+ 165:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Also configures alternate function outputs and clears hardware port control for a selected \a po
+ 166:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \a config provides selected I/O settings. It configures hardware registers Pn_IOCR,Pn_OUT, Pn_OM
+ 167:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \endif
+ 168:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \if XMC4
+ 169:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Initializes input / output mode settings like, pull up / pull down devices,push pull /open drain
+ 170:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Also configures alternate function outputs and clears hardware port control for selected \a port
+ 171:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * It configures hardware registers Pn_IOCR,Pn_OUT,Pn_OMR,Pn_PDISC and Pn_PDR.\n
+ 172:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \endif
+ 173:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 174:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \par<b>Related APIs:</b><BR>
+ 175:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *  None
+ 176:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 177:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \par<b>Note:</b><br>
+ 178:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * This API is called in definition of DAVE_init by code generation and therefore should not be exp
+ 179:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * for the normal operation. Use other APIs only after DAVE_init is called successfully (returns DA
+ 180:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 181:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 182:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  */
+ 183:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 184:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  
+ 185:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** void XMC_GPIO_Init(XMC_GPIO_PORT_t *const port, const uint8_t pin, const XMC_GPIO_CONFIG_t *const c
+ 186:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  
+ 187:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**
+ 188:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 189:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @param  port	Constant pointer pointing to GPIO port, to access hardware register Pn_IOCR.
+ 190:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @param  pin	Port pin number.
+ 191:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @param  mode input / output functionality selection. Refer @ref XMC_GPIO_MODE_t for valid values
+ 192:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 193:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @return None
+ 194:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 195:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \par<b>Description:</b><br>
+ 196:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Sets digital input and output driver functionality and characteristics of a GPIO port pin. It co
+ 197:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * registers Pn_IOCR. \a mode is initially configured during initialization in XMC_GPIO_Init(). Cal
+ 198:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * the port direction functionality as needed later in the program.
+ 199:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 200:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \par<b>Related APIs:</b><BR>
+ 201:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *  None
+ 202:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 203:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  */
+ 204:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 205:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** void XMC_GPIO_SetMode(XMC_GPIO_PORT_t *const port, const uint8_t pin, const XMC_GPIO_MODE_t mode);
+ 206:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 207:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 208:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**
+ 209:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 210:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @param  port	 Constant pointer pointing to GPIO port, to access hardware register Pn_OMR.
+ 211:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @param  pin	 Port pin number.
+ 212:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @param  level output level selection. Refer @ref XMC_GPIO_OUTPUT_LEVEL_t for valid values.
+ 213:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 214:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @return None
+ 215:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 216:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \par<b>Description:</b><br>
+ 217:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Set port pin output level to high or low.It configures hardware registers Pn_OMR.\a level is ini
+ 218:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * configured during initialization in XMC_GPIO_Init(). Call this API to alter output level as need
+ 219:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 220:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \par<b>Related APIs:</b><BR>
+ 221:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *  XMC_GPIO_SetOutputHigh(), XMC_GPIO_SetOutputLow().
+ 222:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 223:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \par<b>Note:</b><br>
+ 224:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Prior to this api, user has to configure port pin to output mode using XMC_GPIO_SetMode().
+ 225:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 226:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  */
+ 227:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 228:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 229:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** __STATIC_INLINE void XMC_GPIO_SetOutputLevel(XMC_GPIO_PORT_t *const port, const uint8_t pin, const 
+ 230:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** {
+ 231:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****   XMC_ASSERT("XMC_GPIO_SetOutputLevel: Invalid port", XMC_GPIO_CHECK_OUTPUT_PORT(port));
+ 232:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****   XMC_ASSERT("XMC_GPIO_SetOutputLevel: Invalid output level", XMC_GPIO_CHECK_OUTPUT_LEVEL(level));
+ 233:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****   
+ 234:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****   port->OMR = (uint32_t)level << pin;
+ 235:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** }
+ 236:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 237:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 238:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**
+ 239:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @param  port constant pointer pointing to GPIO port, to access hardware register Pn_OMR.
+ 240:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @param  pin	Port pin number.
+ 241:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 242:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @return None
+ 243:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 244:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \par<b>Description:</b><br>
+ 245:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *  Sets port pin output to high. It configures hardware registers Pn_OMR.
+ 246:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 247:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *  \par<b>Related APIs:</b><BR>
+ 248:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *  XMC_GPIO_SetOutputLow()
+ 249:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 250:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \par<b>Note:</b><br>
+ 251:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Prior to this api, user has to configure port pin to output mode using XMC_GPIO_SetMode().\n
+ 252:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Register Pn_OMR is virtual and does not contain any flip-flop. A read action delivers the value 
+ 253:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 254:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  */
+ 255:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 256:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** __STATIC_INLINE void XMC_GPIO_SetOutputHigh(XMC_GPIO_PORT_t *const port, const uint8_t pin)
+ 257:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** {
+ 258:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****   XMC_ASSERT("XMC_GPIO_SetOutputHigh: Invalid port", XMC_GPIO_CHECK_OUTPUT_PORT(port));
+ 259:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 260:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****   port->OMR = (uint32_t)0x1U << pin;
+ 261:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** }
+ 262:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 263:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** /**
+ 264:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 265:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @param  port	constant pointer pointing to GPIO port, to access hardware register Pn_OMR.
+ 266:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @param  pin	port pin number.
+ 267:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 268:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * @return  None
+ 269:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 270:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *\par<b>Description:</b><br>
+ 271:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Sets port pin output to low. It configures hardware registers Pn_OMR.\n
+ 272:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 273:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * \par<b>Related APIs:</b><BR>>
+ 274:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * XMC_GPIO_SetOutputHigh()
+ 275:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 276:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *\par<b>Note:</b><br>
+ 277:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Prior to this api, user has to configure port pin to output mode using XMC_GPIO_SetMode().
+ 278:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  * Register Pn_OMR is virtual and does not contain any flip-flop. A read action delivers the value 
+ 279:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  *
+ 280:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****  */
+ 281:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 282:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** __STATIC_INLINE void XMC_GPIO_SetOutputLow(XMC_GPIO_PORT_t *const port, const uint8_t pin)
+ 283:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** {
+ 284:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****   XMC_ASSERT("XMC_GPIO_SetOutputLow: Invalid port", XMC_GPIO_CHECK_OUTPUT_PORT(port));
+ 285:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** 
+ 286:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h ****   port->OMR = 0x10000U << pin;
+  35              	 .loc 2 286 0
+  36 0004 197B     	 ldrb r1,[r3,#12]
+  37 0006 8023     	 mov r3,#128
+  38 0008 5B02     	 lsl r3,r3,#9
+  39 000a 8B40     	 lsl r3,r3,r1
+  40 000c 5360     	 str r3,[r2,#4]
+  41 000e 054B     	 ldr r3,.L5+4
+  42              	.L2:
+  43              	.LBE46:
+  44              	.LBE45:
+  45              	.LBE44:
+  46              	.LBB47:
+  47              	.LBB48:
+  48              	 .file 3 "C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include/cmsis_gcc.h"
+   1:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**************************************************************************//**
+   2:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  * @file     cmsis_gcc.h
+   3:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  * @brief    CMSIS Cortex-M Core Function/Instruction Header File
+   4:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  * @version  V4.30
+   5:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  * @date     20. October 2015
+   6:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  ******************************************************************************/
+   7:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /* Copyright (c) 2009 - 2015 ARM LIMITED
+   8:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+   9:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    All rights reserved.
+  10:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    Redistribution and use in source and binary forms, with or without
+  11:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    modification, are permitted provided that the following conditions are met:
+  12:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    - Redistributions of source code must retain the above copyright
+  13:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****      notice, this list of conditions and the following disclaimer.
+  14:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    - Redistributions in binary form must reproduce the above copyright
+  15:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****      notice, this list of conditions and the following disclaimer in the
+  16:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****      documentation and/or other materials provided with the distribution.
+  17:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    - Neither the name of ARM nor the names of its contributors may be used
+  18:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****      to endorse or promote products derived from this software without
+  19:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****      specific prior written permission.
+  20:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    *
+  21:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  22:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  23:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  24:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    ARE DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDERS AND CONTRIBUTORS BE
+  25:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  26:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  27:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  30:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  31:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    POSSIBILITY OF SUCH DAMAGE.
+  32:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    ---------------------------------------------------------------------------*/
+  33:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+  34:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+  35:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #ifndef __CMSIS_GCC_H
+  36:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #define __CMSIS_GCC_H
+  37:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+  38:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /* ignore some GCC warnings */
+  39:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #if defined ( __GNUC__ )
+  40:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #pragma GCC diagnostic push
+  41:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #pragma GCC diagnostic ignored "-Wsign-conversion"
+  42:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #pragma GCC diagnostic ignored "-Wconversion"
+  43:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #pragma GCC diagnostic ignored "-Wunused-parameter"
+  44:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #endif
+  45:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+  46:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+  47:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /* ###########################  Core Function Access  ########################### */
+  48:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /** \ingroup  CMSIS_Core_FunctionInterface
+  49:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****     \defgroup CMSIS_Core_RegAccFunctions CMSIS Core Register Access Functions
+  50:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   @{
+  51:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+  52:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+  53:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+  54:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Enable IRQ Interrupts
+  55:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Enables IRQ interrupts by clearing the I-bit in the CPSR.
+  56:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****            Can only be executed in Privileged modes.
+  57:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+  58:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __enable_irq(void)
+  59:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+  60:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("cpsie i" : : : "memory");
+  61:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+  62:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+  63:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+  64:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+  65:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Disable IRQ Interrupts
+  66:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Disables IRQ interrupts by setting the I-bit in the CPSR.
+  67:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   Can only be executed in Privileged modes.
+  68:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+  69:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __disable_irq(void)
+  70:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+  71:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("cpsid i" : : : "memory");
+  72:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+  73:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+  74:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+  75:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+  76:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Get Control Register
+  77:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Returns the content of the Control Register.
+  78:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \return               Control Register value
+  79:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+  80:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_CONTROL(void)
+  81:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+  82:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   uint32_t result;
+  83:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+  84:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MRS %0, control" : "=r" (result) );
+  85:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   return(result);
+  86:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+  87:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+  88:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+  89:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+  90:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Set Control Register
+  91:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Writes the given value to the Control Register.
+  92:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \param [in]    control  Control Register value to set
+  93:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+  94:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_CONTROL(uint32_t control)
+  95:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+  96:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MSR control, %0" : : "r" (control) : "memory");
+  97:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+  98:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+  99:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 100:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 101:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Get IPSR Register
+ 102:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Returns the content of the IPSR Register.
+ 103:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \return               IPSR Register value
+ 104:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 105:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_IPSR(void)
+ 106:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 107:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   uint32_t result;
+ 108:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 109:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MRS %0, ipsr" : "=r" (result) );
+ 110:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   return(result);
+ 111:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 112:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 113:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 114:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 115:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Get APSR Register
+ 116:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Returns the content of the APSR Register.
+ 117:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \return               APSR Register value
+ 118:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 119:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_APSR(void)
+ 120:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 121:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   uint32_t result;
+ 122:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 123:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MRS %0, apsr" : "=r" (result) );
+ 124:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   return(result);
+ 125:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 126:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 127:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 128:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 129:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Get xPSR Register
+ 130:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Returns the content of the xPSR Register.
+ 131:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 132:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****     \return               xPSR Register value
+ 133:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 134:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_xPSR(void)
+ 135:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 136:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   uint32_t result;
+ 137:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 138:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MRS %0, xpsr" : "=r" (result) );
+ 139:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   return(result);
+ 140:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 141:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 142:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 143:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 144:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Get Process Stack Pointer
+ 145:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Returns the current value of the Process Stack Pointer (PSP).
+ 146:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \return               PSP Register value
+ 147:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 148:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_PSP(void)
+ 149:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 150:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   register uint32_t result;
+ 151:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 152:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MRS %0, psp\n"  : "=r" (result) );
+ 153:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   return(result);
+ 154:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 155:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 156:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 157:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 158:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Set Process Stack Pointer
+ 159:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Assigns the given value to the Process Stack Pointer (PSP).
+ 160:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \param [in]    topOfProcStack  Process Stack Pointer value to set
+ 161:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 162:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_PSP(uint32_t topOfProcStack)
+ 163:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 164:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MSR psp, %0\n" : : "r" (topOfProcStack) : "sp");
+ 165:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 166:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 167:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 168:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 169:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Get Main Stack Pointer
+ 170:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Returns the current value of the Main Stack Pointer (MSP).
+ 171:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \return               MSP Register value
+ 172:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 173:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_MSP(void)
+ 174:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 175:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   register uint32_t result;
+ 176:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 177:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MRS %0, msp\n" : "=r" (result) );
+ 178:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   return(result);
+ 179:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 180:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 181:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 182:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 183:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Set Main Stack Pointer
+ 184:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Assigns the given value to the Main Stack Pointer (MSP).
+ 185:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 186:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****     \param [in]    topOfMainStack  Main Stack Pointer value to set
+ 187:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 188:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_MSP(uint32_t topOfMainStack)
+ 189:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 190:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MSR msp, %0\n" : : "r" (topOfMainStack) : "sp");
+ 191:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 192:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 193:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 194:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 195:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Get Priority Mask
+ 196:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Returns the current state of the priority mask bit from the Priority Mask Register.
+ 197:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \return               Priority Mask value
+ 198:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 199:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_PRIMASK(void)
+ 200:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 201:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   uint32_t result;
+ 202:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 203:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MRS %0, primask" : "=r" (result) );
+ 204:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   return(result);
+ 205:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 206:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 207:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 208:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 209:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Set Priority Mask
+ 210:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Assigns the given value to the Priority Mask Register.
+ 211:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \param [in]    priMask  Priority Mask
+ 212:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 213:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_PRIMASK(uint32_t priMask)
+ 214:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 215:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MSR primask, %0" : : "r" (priMask) : "memory");
+ 216:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 217:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 218:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 219:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #if       (__CORTEX_M >= 0x03U)
+ 220:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 221:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 222:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Enable FIQ
+ 223:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Enables FIQ interrupts by clearing the F-bit in the CPSR.
+ 224:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****            Can only be executed in Privileged modes.
+ 225:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 226:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __enable_fault_irq(void)
+ 227:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 228:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("cpsie f" : : : "memory");
+ 229:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 230:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 231:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 232:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 233:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Disable FIQ
+ 234:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Disables FIQ interrupts by setting the F-bit in the CPSR.
+ 235:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****            Can only be executed in Privileged modes.
+ 236:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 237:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __disable_fault_irq(void)
+ 238:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 239:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("cpsid f" : : : "memory");
+ 240:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 241:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 242:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 243:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 244:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Get Base Priority
+ 245:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Returns the current value of the Base Priority register.
+ 246:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \return               Base Priority register value
+ 247:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 248:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_BASEPRI(void)
+ 249:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 250:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   uint32_t result;
+ 251:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 252:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MRS %0, basepri" : "=r" (result) );
+ 253:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   return(result);
+ 254:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 255:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 256:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 257:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 258:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Set Base Priority
+ 259:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Assigns the given value to the Base Priority register.
+ 260:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \param [in]    basePri  Base Priority value to set
+ 261:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 262:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_BASEPRI(uint32_t value)
+ 263:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 264:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MSR basepri, %0" : : "r" (value) : "memory");
+ 265:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 266:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 267:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 268:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 269:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Set Base Priority with condition
+ 270:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Assigns the given value to the Base Priority register only if BASEPRI masking is disable
+ 271:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****            or the new value increases the BASEPRI priority level.
+ 272:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \param [in]    basePri  Base Priority value to set
+ 273:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 274:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_BASEPRI_MAX(uint32_t value)
+ 275:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 276:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MSR basepri_max, %0" : : "r" (value) : "memory");
+ 277:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 278:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 279:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 280:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 281:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Get Fault Mask
+ 282:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Returns the current value of the Fault Mask register.
+ 283:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \return               Fault Mask register value
+ 284:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 285:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_FAULTMASK(void)
+ 286:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 287:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   uint32_t result;
+ 288:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 289:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MRS %0, faultmask" : "=r" (result) );
+ 290:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   return(result);
+ 291:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 292:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 293:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 294:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 295:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Set Fault Mask
+ 296:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Assigns the given value to the Fault Mask register.
+ 297:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \param [in]    faultMask  Fault Mask value to set
+ 298:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 299:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_FAULTMASK(uint32_t faultMask)
+ 300:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 301:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("MSR faultmask, %0" : : "r" (faultMask) : "memory");
+ 302:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 303:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 304:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #endif /* (__CORTEX_M >= 0x03U) */
+ 305:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 306:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 307:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #if       (__CORTEX_M == 0x04U) || (__CORTEX_M == 0x07U)
+ 308:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 309:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 310:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Get FPSCR
+ 311:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Returns the current value of the Floating Point Status/Control register.
+ 312:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \return               Floating Point Status/Control register value
+ 313:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 314:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_FPSCR(void)
+ 315:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 316:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #if (__FPU_PRESENT == 1U) && (__FPU_USED == 1U)
+ 317:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   uint32_t result;
+ 318:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 319:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   /* Empty asm statement works as a scheduling barrier */
+ 320:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("");
+ 321:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("VMRS %0, fpscr" : "=r" (result) );
+ 322:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("");
+ 323:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   return(result);
+ 324:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #else
+ 325:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****    return(0);
+ 326:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #endif
+ 327:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 328:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 329:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 330:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 331:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   Set FPSCR
+ 332:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details Assigns the given value to the Floating Point Status/Control register.
+ 333:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \param [in]    fpscr  Floating Point Status/Control value to set
+ 334:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 335:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_FPSCR(uint32_t fpscr)
+ 336:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 337:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #if (__FPU_PRESENT == 1U) && (__FPU_USED == 1U)
+ 338:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   /* Empty asm statement works as a scheduling barrier */
+ 339:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("");
+ 340:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("VMSR fpscr, %0" : : "r" (fpscr) : "vfpcc");
+ 341:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("");
+ 342:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #endif
+ 343:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** }
+ 344:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 345:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #endif /* (__CORTEX_M == 0x04U) || (__CORTEX_M == 0x07U) */
+ 346:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 347:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 348:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 349:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /*@} end of CMSIS_Core_RegAccFunctions */
+ 350:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 351:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 352:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /* ##########################  Core Instruction Access  ######################### */
+ 353:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /** \defgroup CMSIS_Core_InstructionInterface CMSIS Core Instruction Interface
+ 354:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   Access to dedicated instructions
+ 355:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   @{
+ 356:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** */
+ 357:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 358:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /* Define macros for porting to both thumb1 and thumb2.
+ 359:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  * For thumb1, use low register (r0-r7), specified by constraint "l"
+ 360:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  * Otherwise, use general registers, specified by constraint "r" */
+ 361:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #if defined (__thumb__) && !defined (__thumb2__)
+ 362:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #define __CMSIS_GCC_OUT_REG(r) "=l" (r)
+ 363:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #define __CMSIS_GCC_USE_REG(r) "l" (r)
+ 364:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #else
+ 365:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #define __CMSIS_GCC_OUT_REG(r) "=r" (r)
+ 366:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #define __CMSIS_GCC_USE_REG(r) "r" (r)
+ 367:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** #endif
+ 368:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** 
+ 369:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** /**
+ 370:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \brief   No Operation
+ 371:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   \details No Operation does nothing. This instruction can be used for code alignment purposes.
+ 372:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****  */
+ 373:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** __attribute__((always_inline)) __STATIC_INLINE void __NOP(void)
+ 374:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h **** {
+ 375:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Include\cmsis_gcc.h ****   __ASM volatile ("nop");
+  49              	 .loc 3 375 0
+  50              	
+  51 0010 C046     	 nop
+  52              	
+  53              	 .code 16
+  54 0012 013B     	 sub r3,r3,#1
+  55              	.LBE48:
+  56              	.LBE47:
+ 106:../main.c     **** 	static uint32_t BGT24_settle;
+ 107:../main.c     **** 	/* Turn BGT24 on */
+ 108:../main.c     **** 	DIGITAL_IO_SetOutputLow(&BGT24);
+ 109:../main.c     **** 	/* delay until BGT24 is settled */
+ 110:../main.c     **** 	BGT24_settle=46875;
+ 111:../main.c     **** 	while(BGT24_settle!=0)
+  57              	 .loc 1 111 0
+  58 0014 002B     	 cmp r3,#0
+  59 0016 FBD1     	 bne .L2
+  60 0018 034A     	 ldr r2,.L5+8
+  61              	.LVL1:
+ 112:../main.c     **** 	{
+ 113:../main.c     **** 		BGT24_settle--;
+ 114:../main.c     **** 		__NOP();
+ 115:../main.c     **** 	}
+ 116:../main.c     **** 	return;
+ 117:../main.c     **** }
+  62              	 .loc 1 117 0
+  63              	 
+  64 001a 1360     	 str r3,[r2]
+  65 001c 7047     	 bx lr
+  66              	.L6:
+  67 001e C046     	 .align 2
+  68              	.L5:
+  69 0020 00000000 	 .word BGT24
+  70 0024 1BB70000 	 .word 46875
+  71 0028 00000000 	 .word .LANCHOR0
+  72              	 .cfi_endproc
+  73              	.LFE195:
+  75              	 .section .text.radarsense2go_endacq,"ax",%progbits
+  76              	 .align 2
+  77              	 .global radarsense2go_endacq
+  78              	 .code 16
+  79              	 .thumb_func
+  81              	radarsense2go_endacq:
+  82              	.LFB196:
+ 118:../main.c     **** 
+ 119:../main.c     **** void radarsense2go_endacq(void)
+ 120:../main.c     **** {
+  83              	 .loc 1 120 0
+  84              	 .cfi_startproc
+  85 0000 034B     	 ldr r3,.L8
+ 121:../main.c     **** 	/* BGT24 off time */
+ 122:../main.c     **** 	DIGITAL_IO_SetOutputLow(&BGT24);
+ 123:../main.c     **** 	return;
+ 124:../main.c     **** }
+  86              	 .loc 1 124 0
+  87              	 
+  88 0002 1A68     	 ldr r2,[r3]
+  89              	.LVL2:
+  90              	.LBB49:
+  91              	.LBB50:
+  92              	.LBB51:
+  93              	 .loc 2 286 0
+  94 0004 197B     	 ldrb r1,[r3,#12]
+  95 0006 8023     	 mov r3,#128
+  96 0008 5B02     	 lsl r3,r3,#9
+  97 000a 8B40     	 lsl r3,r3,r1
+  98 000c 5360     	 str r3,[r2,#4]
+  99              	.LBE51:
+ 100              	.LBE50:
+ 101              	.LBE49:
+ 102              	 .loc 1 124 0
+ 103 000e 7047     	 bx lr
+ 104              	.L9:
+ 105              	 .align 2
+ 106              	.L8:
+ 107 0010 00000000 	 .word BGT24
+ 108              	 .cfi_endproc
+ 109              	.LFE196:
+ 111              	 .global __aeabi_ui2f
+ 112              	 .global __aeabi_fmul
+ 113              	 .section .text.radarsense2go_result,"ax",%progbits
+ 114              	 .align 2
+ 115              	 .global radarsense2go_result
+ 116              	 .code 16
+ 117              	 .thumb_func
+ 119              	radarsense2go_result:
+ 120              	.LFB194:
+  83:../main.c     **** 	/* place your application code for ISR context execution here */
+ 121              	 .loc 1 83 0
+ 122              	 .cfi_startproc
+ 123              	.LVL3:
+ 124 0000 F0B5     	 push {r4,r5,r6,r7,lr}
+ 125              	.LCFI0:
+ 126              	 .cfi_def_cfa_offset 20
+ 127              	 .cfi_offset 4,-20
+ 128              	 .cfi_offset 5,-16
+ 129              	 .cfi_offset 6,-12
+ 130              	 .cfi_offset 7,-8
+ 131              	 .cfi_offset 14,-4
+ 132 0002 4746     	 mov r7,r8
+ 133 0004 9846     	 mov r8,r3
+ 134 0006 0C1C     	 mov r4,r1
+ 135 0008 061C     	 mov r6,r0
+ 136 000a 80B4     	 push {r7}
+ 137              	.LCFI1:
+ 138              	 .cfi_def_cfa_offset 24
+ 139              	 .cfi_offset 8,-24
+  83:../main.c     **** 	/* place your application code for ISR context execution here */
+ 140              	 .loc 1 83 0
+ 141 000c 06AB     	 add r3,sp,#24
+ 142              	.LVL4:
+ 143 000e 1D88     	 ldrh r5,[r3]
+  86:../main.c     **** 	memcpy(g_sampling_data_Q, adc_aqc_array_Q, size_of_array_acq * sizeof(uint16_t));
+ 144              	 .loc 1 86 0
+ 145 0010 111C     	 mov r1,r2
+ 146              	.LVL5:
+ 147 0012 6D00     	 lsl r5,r5,#1
+  83:../main.c     **** 	/* place your application code for ISR context execution here */
+ 148              	 .loc 1 83 0
+ 149 0014 07AB     	 add r3,sp,#28
+ 150              	.LVL6:
+  86:../main.c     **** 	memcpy(g_sampling_data_Q, adc_aqc_array_Q, size_of_array_acq * sizeof(uint16_t));
+ 151              	 .loc 1 86 0
+ 152 0016 2A1C     	 mov r2,r5
+ 153              	.LVL7:
+ 154 0018 1048     	 ldr r0,.L14
+ 155              	.LVL8:
+  83:../main.c     **** 	/* place your application code for ISR context execution here */
+ 156              	 .loc 1 83 0
+ 157 001a 1F78     	 ldrb r7,[r3]
+  86:../main.c     **** 	memcpy(g_sampling_data_Q, adc_aqc_array_Q, size_of_array_acq * sizeof(uint16_t));
+ 158              	 .loc 1 86 0
+ 159 001c FFF7FEFF 	 bl memcpy
+ 160              	.LVL9:
+  87:../main.c     **** 	memcpy(g_fft_data, &fft_magnitude_array[1], (size_of_array_mag - 1) * sizeof(uint32_t));
+ 161              	 .loc 1 87 0
+ 162 0020 4146     	 mov r1,r8
+ 163 0022 2A1C     	 mov r2,r5
+ 164 0024 0E48     	 ldr r0,.L14+4
+ 165 0026 FFF7FEFF 	 bl memcpy
+ 166              	.LVL10:
+  88:../main.c     **** 
+ 167              	 .loc 1 88 0
+ 168 002a 621E     	 sub r2,r4,#1
+ 169 002c 9200     	 lsl r2,r2,#2
+ 170 002e 311D     	 add r1,r6,#4
+ 171 0030 0C48     	 ldr r0,.L14+8
+ 172 0032 FFF7FEFF 	 bl memcpy
+ 173              	.LVL11:
+  90:../main.c     **** 
+ 174              	 .loc 1 90 0
+ 175 0036 0C4B     	 ldr r3,.L14+12
+ 176 0038 1F70     	 strb r7,[r3]
+  92:../main.c     **** 	{
+ 177              	 .loc 1 92 0
+ 178 003a 012F     	 cmp r7,#1
+ 179 003c 05D9     	 bls .L13
+  98:../main.c     **** 	}
+ 180              	 .loc 1 98 0
+ 181 003e 0022     	 mov r2,#0
+ 182 0040 0A4B     	 ldr r3,.L14+16
+ 183 0042 1A60     	 str r2,[r3]
+ 184              	.L10:
+ 102:../main.c     **** 
+ 185              	 .loc 1 102 0
+ 186              	 
+ 187              	.LVL12:
+ 188              	.LVL13:
+ 189 0044 04BC     	 pop {r2}
+ 190 0046 9046     	 mov r8,r2
+ 191 0048 F0BD     	 pop {r4,r5,r6,r7,pc}
+ 192              	.LVL14:
+ 193              	.L13:
+  94:../main.c     **** 	}
+ 194              	 .loc 1 94 0
+ 195 004a 0998     	 ldr r0,[sp,#36]
+ 196 004c FFF7FEFF 	 bl __aeabi_ui2f
+ 197              	.LVL15:
+ 198 0050 0749     	 ldr r1,.L14+20
+ 199 0052 FFF7FEFF 	 bl __aeabi_fmul
+ 200              	.LVL16:
+ 201 0056 054B     	 ldr r3,.L14+16
+ 202 0058 1860     	 str r0,[r3]
+ 203 005a F3E7     	 b .L10
+ 204              	.L15:
+ 205              	 .align 2
+ 206              	.L14:
+ 207 005c 00000000 	 .word g_sampling_data_I
+ 208 0060 00000000 	 .word g_sampling_data_Q
+ 209 0064 00000000 	 .word g_fft_data
+ 210 0068 00000000 	 .word .LANCHOR1
+ 211 006c 00000000 	 .word g_max_frq_index
+ 212 0070 0000B040 	 .word 1085276160
+ 213              	 .cfi_endproc
+ 214              	.LFE194:
+ 216              	 .section .text.radarsense2go_trigger,"ax",%progbits
+ 217              	 .align 2
+ 218              	 .global radarsense2go_trigger
+ 219              	 .code 16
+ 220              	 .thumb_func
+ 222              	radarsense2go_trigger:
+ 223              	.LFB197:
+ 125:../main.c     **** 
+ 126:../main.c     **** void radarsense2go_trigger(XMC_RADARSENSE2GO_MOTION_t detection_state)
+ 127:../main.c     **** {
+ 224              	 .loc 1 127 0
+ 225              	 .cfi_startproc
+ 226              	.LVL17:
+ 128:../main.c     **** 	motion_last=detection_state;
+ 227              	 .loc 1 128 0
+ 228 0000 074B     	 ldr r3,.L20
+ 229 0002 1870     	 strb r0,[r3]
+ 230 0004 074B     	 ldr r3,.L20+4
+ 231 0006 1A68     	 ldr r2,[r3]
+ 232              	.LVL18:
+ 233              	.LBB65:
+ 234              	.LBB66:
+ 235              	.LBB67:
+ 236              	.LBB68:
+ 237              	 .loc 2 286 0
+ 238 0008 197B     	 ldrb r1,[r3,#12]
+ 239              	.LBE68:
+ 240              	.LBE67:
+ 241              	.LBE66:
+ 242              	.LBE65:
+ 129:../main.c     **** 	if (detection_state == XMC_MOTION_DETECT_APPROACHING || detection_state == XMC_MOTION_DETECT_DEPAR
+ 243              	 .loc 1 129 0
+ 244 000a 0128     	 cmp r0,#1
+ 245 000c 03D9     	 bls .L19
+ 246              	.LBB72:
+ 247              	.LBB73:
+ 248              	.LBB74:
+ 260:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** }
+ 249              	 .loc 2 260 0
+ 250 000e 0123     	 mov r3,#1
+ 251 0010 8B40     	 lsl r3,r3,r1
+ 252 0012 5360     	 str r3,[r2,#4]
+ 253              	.L16:
+ 254              	.LBE74:
+ 255              	.LBE73:
+ 256              	.LBE72:
+ 130:../main.c     **** 	{
+ 131:../main.c     **** 		DIGITAL_IO_SetOutputLow(&LED);
+ 132:../main.c     **** 	}
+ 133:../main.c     **** 	else
+ 134:../main.c     **** 	{
+ 135:../main.c     **** 		DIGITAL_IO_SetOutputHigh(&LED);
+ 136:../main.c     **** 	}
+ 137:../main.c     **** 	return;
+ 138:../main.c     **** }
+ 257              	 .loc 1 138 0
+ 258              	 
+ 259 0014 7047     	 bx lr
+ 260              	.L19:
+ 261              	.LVL19:
+ 262              	.LBB75:
+ 263              	.LBB71:
+ 264              	.LBB70:
+ 265              	.LBB69:
+ 266              	 .loc 2 286 0
+ 267 0016 8023     	 mov r3,#128
+ 268 0018 5B02     	 lsl r3,r3,#9
+ 269 001a 8B40     	 lsl r3,r3,r1
+ 270 001c 5360     	 str r3,[r2,#4]
+ 271 001e F9E7     	 b .L16
+ 272              	.L21:
+ 273              	 .align 2
+ 274              	.L20:
+ 275 0020 00000000 	 .word .LANCHOR2
+ 276 0024 00000000 	 .word LED
+ 277              	.LBE69:
+ 278              	.LBE70:
+ 279              	.LBE71:
+ 280              	.LBE75:
+ 281              	 .cfi_endproc
+ 282              	.LFE197:
+ 284              	 .section .text.startup.main,"ax",%progbits
+ 285              	 .align 2
+ 286              	 .global main
+ 287              	 .code 16
+ 288              	 .thumb_func
+ 290              	main:
+ 291              	.LFB198:
+ 139:../main.c     **** 
+ 140:../main.c     **** 
+ 141:../main.c     **** int main(void)
+ 142:../main.c     **** {
+ 292              	 .loc 1 142 0
+ 293              	 .cfi_startproc
+ 294              	.LVL20:
+ 295 0000 70B5     	 push {r4,r5,r6,lr}
+ 296              	.LCFI2:
+ 297              	 .cfi_def_cfa_offset 16
+ 298              	 .cfi_offset 4,-16
+ 299              	 .cfi_offset 5,-12
+ 300              	 .cfi_offset 6,-8
+ 301              	 .cfi_offset 14,-4
+ 302 0002 84B0     	 sub sp,sp,#16
+ 303              	.LCFI3:
+ 304              	 .cfi_def_cfa_offset 32
+ 143:../main.c     **** 	bool running = false;
+ 144:../main.c     **** 
+ 145:../main.c     **** 	DAVE_Init(); /* Initialization of DAVE APPs  */
+ 305              	 .loc 1 145 0
+ 306 0004 FFF7FEFF 	 bl DAVE_Init
+ 307              	.LVL21:
+ 308 0008 214B     	 ldr r3,.L32
+ 146:../main.c     **** 	DIGITAL_IO_SetOutputHigh(&LED);
+ 147:../main.c     **** 	DIGITAL_IO_SetOutputLow(&BGT24);
+ 148:../main.c     **** 
+ 149:../main.c     **** 	radarsense2go_init(
+ 309              	 .loc 1 149 0
+ 310 000a 224E     	 ldr r6,.L32+4
+ 311 000c 1A68     	 ldr r2,[r3]
+ 312              	.LVL22:
+ 313              	.LBB76:
+ 314              	.LBB77:
+ 315              	.LBB78:
+ 260:C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc\xmc_gpio.h **** }
+ 316              	 .loc 2 260 0
+ 317 000e 197B     	 ldrb r1,[r3,#12]
+ 318 0010 0123     	 mov r3,#1
+ 319 0012 8B40     	 lsl r3,r3,r1
+ 320 0014 5360     	 str r3,[r2,#4]
+ 321 0016 204B     	 ldr r3,.L32+8
+ 322 0018 1A68     	 ldr r2,[r3]
+ 323              	.LVL23:
+ 324              	.LBE78:
+ 325              	.LBE77:
+ 326              	.LBE76:
+ 327              	.LBB79:
+ 328              	.LBB80:
+ 329              	.LBB81:
+ 330              	 .loc 2 286 0
+ 331 001a 197B     	 ldrb r1,[r3,#12]
+ 332 001c 8023     	 mov r3,#128
+ 333 001e 5B02     	 lsl r3,r3,#9
+ 334 0020 8B40     	 lsl r3,r3,r1
+ 335              	.LBE81:
+ 336              	.LBE80:
+ 337              	.LBE79:
+ 338              	 .loc 1 149 0
+ 339 0022 1E49     	 ldr r1,.L32+12
+ 340              	.LBB84:
+ 341              	.LBB83:
+ 342              	.LBB82:
+ 343              	 .loc 2 286 0
+ 344 0024 5360     	 str r3,[r2,#4]
+ 345              	.LBE82:
+ 346              	.LBE83:
+ 347              	.LBE84:
+ 348              	 .loc 1 149 0
+ 349 0026 0888     	 ldrh r0,[r1]
+ 350 0028 02AB     	 add r3,sp,#8
+ 351 002a 1880     	 strh r0,[r3]
+ 352 002c 8978     	 ldrb r1,[r1,#2]
+ 353 002e 1C4A     	 ldr r2,.L32+16
+ 354              	.LVL24:
+ 355 0030 9970     	 strb r1,[r3,#2]
+ 356 0032 6946     	 mov r1,sp
+ 357 0034 1B4B     	 ldr r3,.L32+20
+ 358 0036 0393     	 str r3,[sp,#12]
+ 359 0038 331D     	 add r3,r6,#4
+ 360 003a 11CB     	 ldmia r3!,{r0,r4}
+ 361 003c 11C1     	 stmia r1!,{r0,r4}
+ 143:../main.c     **** 	bool running = false;
+ 362              	 .loc 1 143 0
+ 363 003e 0024     	 mov r4,#0
+ 364              	 .loc 1 149 0
+ 365 0040 5168     	 ldr r1,[r2,#4]
+ 366 0042 3368     	 ldr r3,[r6]
+ 367 0044 1068     	 ldr r0,[r2]
+ 368 0046 9268     	 ldr r2,[r2,#8]
+ 369 0048 FFF7FEFF 	 bl radarsense2go_init
+ 370              	.LVL25:
+ 150:../main.c     **** 			radarsense2go_timing,
+ 151:../main.c     **** 			radarsense2go_algorithm,
+ 152:../main.c     **** 			radarsense2go_powerdown,
+ 153:../main.c     **** 			&TIMER_0
+ 154:../main.c     **** 	);
+ 155:../main.c     **** 
+ 156:../main.c     **** 	radarsense2go_regcb_startacq ( radarsense2go_startacq );
+ 371              	 .loc 1 156 0
+ 372 004c 1648     	 ldr r0,.L32+24
+ 373 004e FFF7FEFF 	 bl radarsense2go_regcb_startacq
+ 374              	.LVL26:
+ 157:../main.c     **** 	radarsense2go_regcb_endacq ( radarsense2go_endacq );
+ 375              	 .loc 1 157 0
+ 376 0052 1648     	 ldr r0,.L32+28
+ 377 0054 FFF7FEFF 	 bl radarsense2go_regcb_endacq
+ 378              	.LVL27:
+ 158:../main.c     **** 	radarsense2go_regcb_result ( radarsense2go_result );
+ 379              	 .loc 1 158 0
+ 380 0058 1548     	 ldr r0,.L32+32
+ 381 005a FFF7FEFF 	 bl radarsense2go_regcb_result
+ 382              	.LVL28:
+ 159:../main.c     **** 	radarsense2go_regcb_trigger ( radarsense2go_trigger );
+ 383              	 .loc 1 159 0
+ 384 005e 1548     	 ldr r0,.L32+36
+ 385 0060 FFF7FEFF 	 bl radarsense2go_regcb_trigger
+ 386              	.LVL29:
+ 387 0064 144D     	 ldr r5,.L32+40
+ 388              	.LVL30:
+ 389              	.L23:
+ 160:../main.c     **** 
+ 161:../main.c     **** 	while (1)
+ 162:../main.c     **** 	{
+ 163:../main.c     **** 		if (running == false)
+ 390              	 .loc 1 163 0
+ 391 0066 002C     	 cmp r4,#0
+ 392 0068 05D1     	 bne .L24
+ 393              	.LVL31:
+ 394              	.L30:
+ 164:../main.c     **** 		{
+ 165:../main.c     **** 			if (start == true)
+ 395              	 .loc 1 165 0
+ 396 006a 2B78     	 ldrb r3,[r5]
+ 397 006c 002B     	 cmp r3,#0
+ 398 006e FCD0     	 beq .L30
+ 399              	.LVL32:
+ 166:../main.c     **** 			{
+ 167:../main.c     **** 				running = true;
+ 168:../main.c     **** 				radarsense2go_start();
+ 400              	 .loc 1 168 0
+ 401 0070 FFF7FEFF 	 bl radarsense2go_start
+ 402              	.LVL33:
+ 167:../main.c     **** 				radarsense2go_start();
+ 403              	 .loc 1 167 0
+ 404 0074 0124     	 mov r4,#1
+ 405              	.LVL34:
+ 406              	.L24:
+ 169:../main.c     **** 			}
+ 170:../main.c     **** 		}
+ 171:../main.c     **** 		else
+ 172:../main.c     **** 		{
+ 173:../main.c     **** 			if (start == false)
+ 407              	 .loc 1 173 0
+ 408 0076 2B78     	 ldrb r3,[r5]
+ 409 0078 002B     	 cmp r3,#0
+ 410 007a 05D0     	 beq .L31
+ 411              	.L26:
+ 412              	.LVL35:
+ 174:../main.c     **** 			{
+ 175:../main.c     **** 				running = false;
+ 176:../main.c     **** 				radarsense2go_stop();
+ 177:../main.c     **** 			}
+ 178:../main.c     **** 
+ 179:../main.c     **** 			radarsense2go_set_detection_threshold(radarsense2go_algorithm.trigger_det_level);
+ 413              	 .loc 1 179 0
+ 414 007c 7068     	 ldr r0,[r6,#4]
+ 415 007e FFF7FEFF 	 bl radarsense2go_set_detection_threshold
+ 416              	.LVL36:
+ 180:../main.c     **** 
+ 181:../main.c     **** 			/* place your application code for main execution here */
+ 182:../main.c     **** 			/* e.g. communication on peripherals */
+ 183:../main.c     **** 			radarsense2go_exitmain(); /* only need to be called if
+ 417              	 .loc 1 183 0
+ 418 0082 FFF7FEFF 	 bl radarsense2go_exitmain
+ 419              	.LVL37:
+ 420 0086 EEE7     	 b .L23
+ 421              	.LVL38:
+ 422              	.L31:
+ 176:../main.c     **** 			}
+ 423              	 .loc 1 176 0
+ 424 0088 FFF7FEFF 	 bl radarsense2go_stop
+ 425              	.LVL39:
+ 175:../main.c     **** 				radarsense2go_stop();
+ 426              	 .loc 1 175 0
+ 427 008c 0024     	 mov r4,#0
+ 428 008e F5E7     	 b .L26
+ 429              	.L33:
+ 430              	 .align 2
+ 431              	.L32:
+ 432 0090 00000000 	 .word LED
+ 433 0094 00000000 	 .word .LANCHOR4
+ 434 0098 00000000 	 .word BGT24
+ 435 009c 00000000 	 .word .LANCHOR5
+ 436 00a0 00000000 	 .word .LANCHOR3
+ 437 00a4 00000000 	 .word TIMER_0
+ 438 00a8 00000000 	 .word radarsense2go_startacq
+ 439 00ac 00000000 	 .word radarsense2go_endacq
+ 440 00b0 00000000 	 .word radarsense2go_result
+ 441 00b4 00000000 	 .word radarsense2go_trigger
+ 442 00b8 00000000 	 .word .LANCHOR6
+ 443              	 .cfi_endproc
+ 444              	.LFE198:
+ 446              	 .global start
+ 447              	 .comm g_max_frq_index,4,4
+ 448              	 .global g_motion
+ 449              	 .comm g_fft_data,512,4
+ 450              	 .comm g_sampling_data_Q,512,4
+ 451              	 .comm g_sampling_data_I,512,4
+ 452              	 .global radarsense2go_powerdown
+ 453              	 .global radarsense2go_algorithm
+ 454              	 .global radarsense2go_timing
+ 455              	 .section .bss.BGT24_settle.8490,"aw",%nobits
+ 456              	 .align 2
+ 457              	 .set .LANCHOR0,.+0
+ 460              	BGT24_settle.8490:
+ 461 0000 00000000 	 .space 4
+ 462              	 .section .data.motion_last,"aw",%progbits
+ 463              	 .set .LANCHOR2,.+0
+ 466              	motion_last:
+ 467 0000 02       	 .byte 2
+ 468              	 .section .data.radarsense2go_algorithm,"aw",%progbits
+ 469              	 .align 2
+ 470              	 .set .LANCHOR4,.+0
+ 473              	radarsense2go_algorithm:
+ 474 0000 01       	 .byte 1
+ 475 0001 000000   	 .space 3
+ 476 0004 C8000000 	 .word 200
+ 477 0008 00       	 .byte 0
+ 478 0009 000000   	 .space 3
+ 479              	 .section .data.radarsense2go_powerdown,"aw",%progbits
+ 480              	 .align 2
+ 481              	 .set .LANCHOR5,.+0
+ 484              	radarsense2go_powerdown:
+ 485 0000 01       	 .byte 1
+ 486 0001 01       	 .byte 1
+ 487 0002 01       	 .byte 1
+ 488 0003 00       	 .section .bss.start,"aw",%nobits
+ 489              	 .set .LANCHOR6,.+0
+ 492              	start:
+ 493 0000 00       	 .space 1
+ 494              	 .section .data.g_motion,"aw",%progbits
+ 495              	 .set .LANCHOR1,.+0
+ 498              	g_motion:
+ 499 0000 02       	 .byte 2
+ 500              	 .section .data.radarsense2go_timing,"aw",%progbits
+ 501              	 .align 2
+ 502              	 .set .LANCHOR3,.+0
+ 505              	radarsense2go_timing:
+ 506 0000 C6020000 	 .word 710
+ 507 0004 2C010000 	 .word 300
+ 508 0008 08       	 .byte 8
+ 509 0009 000000   	 .space 3
+ 510              	 .text
+ 511              	.Letext0:
+ 512              	 .file 4 "c:\\davev4\\dave-4.3.2\\eclipse\\arm-gcc-49\\arm-none-eabi\\include\\machine\\_default_types.h"
+ 513              	 .file 5 "c:\\davev4\\dave-4.3.2\\eclipse\\arm-gcc-49\\arm-none-eabi\\include\\stdint.h"
+ 514              	 .file 6 "C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Infineon/XMC1300_series/Include/XMC1300.h"
+ 515              	 .file 7 "C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc/xmc1_scu.h"
+ 516              	 .file 8 "C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc/xmc_ccu4.h"
+ 517              	 .file 9 "C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Dave/Generated/GLOBAL_CCU4/global_ccu4.h"
+ 518              	 .file 10 "C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Dave/Generated/TIMER/timer.h"
+ 519              	 .file 11 "C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/XMCLib/inc/xmc1_gpio.h"
+ 520              	 .file 12 "C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Dave/Generated/DIGITAL_IO/digital_io.h"
+ 521              	 .file 13 "C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Dave/Generated/Dave.h"
+ 522              	 .file 14 "C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/RadarSense2Go/inc/radarsense2go_library.h"
+ 523              	 .file 15 "C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Libraries/CMSIS/Infineon/XMC1300_series/Include/system_XMC1300.h"
+ 524              	 .file 16 "C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Dave/Generated/TIMER/timer_extern.h"
+ 525              	 .file 17 "C:/Users/Uzun/Desktop/All_Deliverables_17112016 micrium/Radar_sense2Go_exe_V2/Radar_sense2Go_exe/Dave/Generated/DIGITAL_IO/digital_io_extern.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 main.c
+    {standard input}:18     .text.radarsense2go_startacq:00000000 $t
+    {standard input}:23     .text.radarsense2go_startacq:00000000 radarsense2go_startacq
+    {standard input}:69     .text.radarsense2go_startacq:00000020 $d
+    {standard input}:76     .text.radarsense2go_endacq:00000000 $t
+    {standard input}:81     .text.radarsense2go_endacq:00000000 radarsense2go_endacq
+    {standard input}:107    .text.radarsense2go_endacq:00000010 $d
+    {standard input}:114    .text.radarsense2go_result:00000000 $t
+    {standard input}:119    .text.radarsense2go_result:00000000 radarsense2go_result
+    {standard input}:207    .text.radarsense2go_result:0000005c $d
+                            *COM*:00000200 g_sampling_data_I
+                            *COM*:00000200 g_sampling_data_Q
+                            *COM*:00000200 g_fft_data
+                            *COM*:00000004 g_max_frq_index
+    {standard input}:217    .text.radarsense2go_trigger:00000000 $t
+    {standard input}:222    .text.radarsense2go_trigger:00000000 radarsense2go_trigger
+    {standard input}:275    .text.radarsense2go_trigger:00000020 $d
+    {standard input}:285    .text.startup.main:00000000 $t
+    {standard input}:290    .text.startup.main:00000000 main
+    {standard input}:432    .text.startup.main:00000090 $d
+    {standard input}:492    .bss.start:00000000 start
+    {standard input}:498    .data.g_motion:00000000 g_motion
+    {standard input}:484    .data.radarsense2go_powerdown:00000000 radarsense2go_powerdown
+    {standard input}:473    .data.radarsense2go_algorithm:00000000 radarsense2go_algorithm
+    {standard input}:505    .data.radarsense2go_timing:00000000 radarsense2go_timing
+    {standard input}:456    .bss.BGT24_settle.8490:00000000 $d
+    {standard input}:460    .bss.BGT24_settle.8490:00000000 BGT24_settle.8490
+    {standard input}:466    .data.motion_last:00000000 motion_last
+    {standard input}:469    .data.radarsense2go_algorithm:00000000 $d
+    {standard input}:480    .data.radarsense2go_powerdown:00000000 $d
+    {standard input}:493    .bss.start:00000000 $d
+    {standard input}:501    .data.radarsense2go_timing:00000000 $d
+                     .debug_frame:00000010 $d
+
+UNDEFINED SYMBOLS
+BGT24
+__aeabi_ui2f
+__aeabi_fmul
+memcpy
+LED
+DAVE_Init
+radarsense2go_init
+radarsense2go_regcb_startacq
+radarsense2go_regcb_endacq
+radarsense2go_regcb_result
+radarsense2go_regcb_trigger
+radarsense2go_start
+radarsense2go_set_detection_threshold
+radarsense2go_exitmain
+radarsense2go_stop
+TIMER_0
